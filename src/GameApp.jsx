@@ -2,25 +2,40 @@ import React, { useState } from 'react';
 import CardDeck from './components/CardDeck';
 import './components/GameApp.css';
 
-const games = ['Sing', 'Dance', 'Team Game'];
+const games = [
+  { name: 'Sing', type: 'single', durations: ['1', '2', '3'] },
+  { name: 'Dance', type: 'single', durations: ['1', '2', '3'] },
+  { name: 'Team Game', type: 'team', teams: 2, durations: ['4', '5'] },
+  { name: 'Duo Team Game', type: 'team', teams: 2, durations: ['3', '4'] },
+  { name: 'Trio Team Game', type: 'team', teams: 3, durations: ['5'] },
+  { name: 'hunger game', type: 'team', teams: 3, durations: ['5'] },
+];
+
 const names = ['Naved', 'Faiz', 'Afzal', 'Yaseen', 'Saif', 'Samadhan'];
-const durations = ['1', '2', '3', '4', '5'];
 
 function getRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function splitTeams(namesArr) {
+// Split names into N roughly equal teams
+function splitIntoTeams(namesArr, teamCount) {
   const shuffled = [...namesArr].sort(() => 0.5 - Math.random());
-  return {
-    team1: shuffled.slice(0, 3),
-    team2: shuffled.slice(3, 6),
-  };
+  const teamSize = Math.floor(namesArr.length / teamCount);
+  let teams = [];
+  for (let i = 0; i < teamCount; i++) {
+    teams.push(
+      shuffled.slice(
+        i * teamSize,
+        i === teamCount - 1 ? undefined : (i + 1) * teamSize
+      )
+    );
+  }
+  return teams;
 }
 
 export default function GameApp() {
   const [game, setGame] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState(''); // string or array of teams
   const [duration, setDuration] = useState('');
   const [revealed, setRevealed] = useState({ game: false, name: false, duration: false });
   const [step, setStep] = useState(0);
@@ -38,16 +53,16 @@ export default function GameApp() {
 
     setTimeout(() => {
       const selectedGame = getRandom(games);
-      setGame(selectedGame);
+      setGame(selectedGame.name);
 
-      if (selectedGame === 'Sing' || selectedGame === 'Dance') {
+      if (selectedGame.type === 'single') {
         setName(getRandom(names));
-        setDuration(getRandom(['1', '2', '3']));
       } else {
-        setName(splitTeams(names));
-        setDuration(getRandom(['4', '5']));
+        const teams = splitIntoTeams(names, selectedGame.teams);
+        setName(teams);
       }
 
+      setDuration(getRandom(selectedGame.durations));
       setStep(1);
     }, 700);
   };
@@ -67,10 +82,14 @@ export default function GameApp() {
   const renderNameText = () => {
     if (!revealed.name) return '';
     if (typeof name === 'string') return name;
+
     return (
       <>
-        <div><strong>Team 1:</strong> {name.team1.join(', ')}</div>
-        <div><strong>Team 2:</strong> {name.team2.join(', ')}</div>
+        {name.map((team, i) => (
+          <div key={i}>
+            <strong>Team {i + 1}:</strong> {team.join(', ')}
+          </div>
+        ))}
       </>
     );
   };
@@ -84,7 +103,7 @@ export default function GameApp() {
       if (typeof entry.name === 'string') {
         matchName = entry.name.toLowerCase().includes(filterName.toLowerCase());
       } else {
-        const combined = [...entry.name.team1, ...entry.name.team2].join(', ').toLowerCase();
+        const combined = entry.name.flat().join(', ').toLowerCase();
         matchName = combined.includes(filterName.toLowerCase());
       }
     }
@@ -96,17 +115,25 @@ export default function GameApp() {
     <div className="game-app-container">
       {/* History Panel */}
       <div className={`history-panel ${showHistory ? 'open' : ''}`}>
-        <button className="history-toggle" onClick={() => setShowHistory(!showHistory)}>
+        <button
+          className="history-toggle"
+          onClick={() => setShowHistory(!showHistory)}
+        >
           {showHistory ? 'Hide History' : 'Show History'}
         </button>
 
         {showHistory && (
           <>
             <div className="history-filters">
-              <select value={filterGame} onChange={(e) => setFilterGame(e.target.value)}>
+              <select
+                value={filterGame}
+                onChange={(e) => setFilterGame(e.target.value)}
+              >
                 <option value="">All Games</option>
                 {games.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                  <option key={g.name} value={g.name}>
+                    {g.name}
+                  </option>
                 ))}
               </select>
               <input
@@ -115,10 +142,15 @@ export default function GameApp() {
                 value={filterName}
                 onChange={(e) => setFilterName(e.target.value)}
               />
-              <select value={filterDuration} onChange={(e) => setFilterDuration(e.target.value)}>
+              <select
+                value={filterDuration}
+                onChange={(e) => setFilterDuration(e.target.value)}
+              >
                 <option value="">All Durations</option>
-                {durations.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+                {['1', '2', '3', '4', '5'].map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
                 ))}
               </select>
             </div>
@@ -129,18 +161,25 @@ export default function GameApp() {
               ) : (
                 filterHistory.map((entry, index) => (
                   <div key={index} className="history-item">
-                    <div><strong>{entry.game}</strong></div>
+                    <div>
+                      <strong>{entry.game}</strong>
+                    </div>
                     <div>
                       {typeof entry.name === 'string' ? (
                         entry.name
                       ) : (
                         <>
-                          <div><strong>Team 1:</strong> {entry.name.team1.join(', ')}</div>
-                          <div><strong>Team 2:</strong> {entry.name.team2.join(', ')}</div>
+                          {entry.name.map((team, i) => (
+                            <div key={i}>
+                              <strong>Team {i + 1}:</strong> {team.join(', ')}
+                            </div>
+                          ))}
                         </>
                       )}
                     </div>
-                    <div><strong>Duration:</strong> {entry.duration}</div>
+                    <div>
+                      <strong>Duration:</strong> {entry.duration}
+                    </div>
                   </div>
                 ))
               )}
@@ -171,7 +210,9 @@ export default function GameApp() {
           title="Duration"
           text={duration}
           revealed={revealed.duration}
-          onClick={() => step === 3 && !revealed.duration && handleReveal('duration')}
+          onClick={() =>
+            step === 3 && !revealed.duration && handleReveal('duration')
+          }
           disabled={step !== 3}
         />
       </div>
@@ -180,16 +221,19 @@ export default function GameApp() {
         <div className="result">
           <h2>Selected Combination:</h2>
           <p>
-            Game: <strong>{game}</strong><br />
-            Player(s): <strong>
+            Game: <strong>{game}</strong>
+            <br />
+            Player(s):{' '}
+            <strong>
               {typeof name === 'string'
                 ? name
-                : <>
-                    <div>Team 1: {name.team1.join(', ')}</div>
-                    <div>Team 2: {name.team2.join(', ')}</div>
-                  </>
-              }
-            </strong><br />
+                : name.map((team, i) => (
+                    <div key={i}>
+                      Team {i + 1}: {team.join(', ')}
+                    </div>
+                  ))}
+            </strong>
+            <br />
             Duration: <strong>{duration}</strong>
           </p>
         </div>
