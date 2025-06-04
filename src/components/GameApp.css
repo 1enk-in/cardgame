@@ -253,8 +253,8 @@ button {
 
 .history-panel {
   position: absolute;
-  left: -100px;
-  top: 100px;
+  left: -290px;
+  top: 90px;
   width: 220px;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
